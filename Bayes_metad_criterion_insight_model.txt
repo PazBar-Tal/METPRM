@@ -1,0 +1,132 @@
+# Bayesian estimation of meta-d/d for group correlation between domains
+
+data {
+    for (s in 1:nsubj) {
+        # Type 1 counts for task 1
+        N[s,1] <- sum(counts1[s,1:nratings*2])
+        S[s,1] <- sum(counts1[s,(nratings*2)+1:nratings*4])
+        H[s,1] <- sum(counts1[s,(nratings*3)+1:nratings*4])
+        M[s,1] <- sum(counts1[s,(nratings*2)+1:nratings*3])
+        FA[s,1] <- sum(counts1[s,nratings+1:nratings*2])
+        CR[s,1] <- sum(counts1[s,1:nratings])
+
+        # Type 1 counts for task 2
+        N[s,2] <- sum(counts2[s,1:nratings*2])
+        S[s,2] <- sum(counts2[s,(nratings*2)+1:nratings*4])
+        H[s,2] <- sum(counts2[s,(nratings*3)+1:nratings*4])
+        M[s,2] <- sum(counts2[s,(nratings*2)+1:nratings*3])
+        FA[s,2] <- sum(counts2[s,nratings+1:nratings*2])
+        CR[s,2] <- sum(counts2[s,1:nratings])
+    }
+}
+
+model {
+  for (s in 1:nsubj) {
+
+    ## TYPE 2 SDT MODEL (META-D)
+	# Multinomial likelihood for response counts ordered as c(nR_S1,nR_S2)
+    counts1[s,1:nratings] ~ dmulti(prT[s,1:nratings,1],CR[s,1])
+    counts1[s,nratings+1:nratings*2] ~ dmulti(prT[s,nratings+1:nratings*2,1],FA[s,1])
+    counts1[s,(nratings*2)+1:nratings*3] ~ dmulti(prT[s,(nratings*2)+1:nratings*3,1],M[s,1])
+    counts1[s,(nratings*3)+1:nratings*4] ~ dmulti(prT[s,(nratings*3)+1:nratings*4,1],H[s,1])
+
+    counts2[s,1:nratings] ~ dmulti(prT[s,1:nratings,2],CR[s,2])
+    counts2[s,nratings+1:nratings*2] ~ dmulti(prT[s,nratings+1:nratings*2,2],FA[s,2])
+    counts2[s,(nratings*2)+1:nratings*3] ~ dmulti(prT[s,(nratings*2)+1:nratings*3,2],M[s,2])
+    counts2[s,(nratings*3)+1:nratings*4] ~ dmulti(prT[s,(nratings*3)+1:nratings*4,2],H[s,2])
+
+    for (task in 1:2) {
+
+		# Means of SDT distributions]
+		mu[s,task] <- Mratio[s]*d1[s,task]
+		S2mu[s,task] <- mu[s,task]/2
+		S1mu[s,task] <- -mu[s,task]/2
+
+		# Calculate normalisation constants
+		C_area_rS1[s,task] <- phi(c1[s,task] - S1mu[s,task])
+		I_area_rS1[s,task] <- phi(c1[s,task] - S2mu[s,task])
+		C_area_rS2[s,task] <- 1-phi(c1[s,task] - S2mu[s,task])
+		I_area_rS2[s,task] <- 1-phi(c1[s,task] - S1mu[s,task])
+
+		# Get nC_rS1 probs
+		pr[s,1,task] <- phi(cS1[s,1,task] - S1mu[s,task])/C_area_rS1[s,task]
+		for (k in 1:nratings-2) {
+			pr[s,k+1,task] <- (phi(cS1[s,k+1,task] - S1mu[s,task])-phi(cS1[s,k,task] - S1mu[s,task]))/C_area_rS1[s,task]
+		}
+		pr[s,nratings,task] <- (phi(c1[s,task] - S1mu[s,task])-phi(cS1[s,nratings-1,task] - S1mu[s,task]))/C_area_rS1[s,task]
+
+		# Get nI_rS2 probs
+		pr[s,nratings+1,task] <- ((1-phi(c1[s,task] - S1mu[s,task]))-(1-phi(cS2[s,1,task] - S1mu[s,task])))/I_area_rS2[s,task]
+		for (k in 1:nratings-2) {
+			pr[s,nratings+1+k,task] <- ((1-phi(cS2[s,k,task] - S1mu[s,task]))-(1-phi(cS2[s,k+1,task] - S1mu[s,task])))/I_area_rS2[s,task]
+		}
+		pr[s,nratings*2,task] <- (1-phi(cS2[s,nratings-1,task] - S1mu[s,task]))/I_area_rS2[s,task]
+
+		# Get nI_rS1 probs
+		pr[s,(nratings*2)+1, task] <- phi(cS1[s,1,task] - S2mu[s,task])/I_area_rS1[s,task]
+		for (k in 1:nratings-2) {
+			pr[s,(nratings*2)+1+k,task] <- (phi(cS1[s,k+1,task] - S2mu[s,task])-phi(cS1[s,k,task] - S2mu[s,task]))/I_area_rS1[s,task]
+		}
+		pr[s,nratings*3,task] <- (phi(c1[s,task] - S2mu[s,task])-phi(cS1[s,nratings-1,task] - S2mu[s,task]))/I_area_rS1[s,task]
+
+		# Get nC_rS2 probs
+		pr[s,(nratings*3)+1,task] <- ((1-phi(c1[s,task] - S2mu[s,task]))-(1-phi(cS2[s,1,task] - S2mu[s,task])))/C_area_rS2[s,task]
+		for (k in 1:nratings-2) {
+			pr[s,(nratings*3)+1+k,task] <- ((1-phi(cS2[s,k,task] - S2mu[s,task]))-(1-phi(cS2[s,k+1,task] - S2mu[s,task])))/C_area_rS2[s,task]
+		}
+		pr[s,nratings*4,task] <- (1-phi(cS2[s,nratings-1,task] - S2mu[s,task]))/C_area_rS2[s,task]
+
+		# Avoid underflow of probabilities
+		for (i in 1:nratings*4) {
+			prT[s,i,task] <- ifelse(pr[s,i,task] < Tol, Tol, pr[s,i,task])
+		}
+
+		# Specify ordered prior on criteria (bounded above and below by Type 1 c)
+		for (j in 1:(nratings-1)) {
+			cS1_raw[s,j,task] ~ dnorm(mu_c2n[s,task]+c1[s,task], 1) 
+			cS2_raw[s,j,task] ~ dnorm(mu_c2p[s,task]+c1[s,task], 1) 
+		}
+		cS1[s,1:nratings-1,task] <- sort(cS1_raw[s,1:nratings-1,task])
+		cS2[s,1:nratings-1,task] <- sort(cS2_raw[s,1:nratings-1,task])
+       
+    	}
+
+        delta[s] ~ dnorm(0, lambda_delta)
+        logMratio[s] <- mu_logMratio + epsilon_logMratio*delta[s]
+        Mratio[s] <- exp(logMratio[s])
+
+        mu_c2n[s,1] ~ dnorm(groupMu_c2n[1], lambda_c2n[1])
+        mu_c2n[s,2] ~ dnorm(groupMu_c2n[2], lambda_c2n[2])
+	    mu_c2p[s,1] ~ dnorm(groupMu_c2p[1], lambda_c2p[1])
+        mu_c2p[s,2] ~ dnorm(groupMu_c2p[2], lambda_c2p[2])   	
+
+	}
+
+    groupMu_c2n[1] ~ dnorm(0, 0.01) 
+    groupMu_c2n[2] ~ dnorm(0, 0.01) 
+    groupMu_c2p[1] ~ dnorm(0, 0.01) 
+    groupMu_c2p[2] ~ dnorm(0, 0.01)
+
+	sigma_c2n[1] ~ dnorm(0, 0.01) I(0, )
+    sigma_c2n[2] ~ dnorm(0, 0.01) I(0, )
+    sigma_c2p[1] ~ dnorm(0, 0.01) I(0, )
+	sigma_c2p[2] ~ dnorm(0, 0.01) I(0, )
+
+	lambda_c2n[1] <- pow(sigma_c2n[1], -2)
+    lambda_c2n[2] <- pow(sigma_c2n[2], -2)
+    lambda_c2p[1] <- pow(sigma_c2p[1], -2)
+	lambda_c2p[2] <- pow(sigma_c2p[2], -2)
+
+    mu_logMratio ~ dnorm(0, 1)
+    sigma_delta ~ dnorm(0, 1) I(0,)
+    lambda_delta <- pow(sigma_delta, -2)
+    epsilon_logMratio ~ dbeta(1,1)
+    sigma_logMratio <- abs(epsilon_logMratio)*sigma_delta
+
+    # sampling from the prior for Savage-Dickey Bayes Factor calculation
+    groupMu_c2n_prior[1] ~ dnorm(0, 0.01) 
+    groupMu_c2n_prior[2] ~ dnorm(0, 0.01) 
+    groupMu_c2p_prior[1] ~ dnorm(0, 0.01) 
+    groupMu_c2p_prior[2] ~ dnorm(0, 0.01) 
+
+}
