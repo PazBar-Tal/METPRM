@@ -17,24 +17,44 @@
     <link href="jspsych-6.1.0/css/jspsych.css" rel="stylesheet" type="text/css"></link>
     <link href="style.css" rel="stylesheet" type="text/css" />
     <style>
+    
     html, body {
       height: 100%;
       margin: 0;
       padding: 0;
       overflow: hidden;
     }
+    img {
+            will-change: transform;
+            transform: translate3d(0, 0, 0);
+    }
+    
+
     </style>
 </head>
   <body></body>
   <script>
 
+
+      ////TRY TO PRELOAD IMG BEFOREHAND //
+
+      fetch("image_list.json")
+          .then(response => response.json())
+          .then(images => {
+              jsPsych.pluginAPI.preloadImages(images, function () {
+                  console.log("All images preloaded.");
+              });
+          });
+
+
       /* INITIALIZE SOME VARIABLES */
+
       const num_steps = 20;
       const stim_dur = 2000; /* milliseconds */
       const fix_dur = 200;
 
-      const practice_reps = 2;    /* x 3 trials - loop this until at least 75% correct  */
-      const practice_confidence = 2; /* x 3 trials */
+      const practice_reps = 2;    /* 2 x 3 trials - loop this until at least 75% correct  */
+      const practice_confidence = 2; /*2 x 3 trials */
 
       const num_ima_trials = 5; /* 10 repetation of imagination trials */
       const num_ima_reps = 1; /* how often to repeat the 2 orientations */
@@ -43,16 +63,17 @@
       const lower_bound = 60; /* lower than this - increase isibility */
       const upper_bound = 80; /* higher than this - decrease visibility */
       const num_trials_stair_block = 10; /* 10 evaluate acc after this many trials */
-      const num_stair_reps = 12; /* 12 number of staircase reps - two blocks - one per tilt */
-      const num_objects = 2 /* 2 - inanimated and animated objects */
-      const num_ignore_staircases = 3 /* 3 number of staircases that will not be included in the 70% stopping rule */
-      const num_consecutive_stairs = 2 /* number of staircases that obtiaobtained ned 70% acc */
+      const num_stair_reps = 1; /* 12 number of staircase reps - two blocks - one per tilt */
+      const num_objects = 2 /* 2 - inanimated and animated objects within a set */
+      const num_ignore_staircases = 11 /* 3 number of staircases that will not be included in the 70% stopping rule */
+      const num_consecutive_stairs = 2 /* 2 number of staircases that obtiaobtained ned 70% acc */
 
       const num_trials_main  = 24; /* 24 needs to be dividable by 2 */
       const num_blocks = 16; /* 16 - 2 x (2 (cong/incong) x 4(no-ima animate,no-ima inanimate, animate-ima,inanimate-ima) )
 
       /* Define two sets of stimuli */
       const stimulusSets = 2; /* Math.floor(Math.random() * 2) + 1; */ /* 2 - number of sets. set contain 2 environments and 2 objects */
+
 
 
 
@@ -107,13 +128,13 @@
                   var step = (stopValue - startValue) / (cardinality - 1);
                   for (var i = 0; i < cardinality; i++) {
                       var vis = Math.round(startValue + (step * i));
-                      arr.push("img/set_" + set.toString() + "_obj_" + stim.toString() + "_scene_" + congruency.toString() + "_vis_" + vis.toString()  + ".png");
+                      arr.push("img/set_" + set.toString() + "_obj_" + stim.toString() + "_scene_" + congruency.toString() + "_vis_" + vis.toString() + ".png");
                   }
               } else if (stim == 0) {
                   ranNoiseOrder = jsPsych.randomization.repeat([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 1);
                   for (var i = 0; i < cardinality; i++) {
                       var random_number = ranNoiseOrder[i];
-                      arr.push("img/set_" + set.toString() + "_scene_" + cong_scene.toString() + "_noise_" + random_number.toString() + ".png");
+                      arr.push("img/set_" + set.toString() + "_scene_in_set_" + cong_scene.toString() + "_noise_" + random_number.toString() + ".png");
                   }
               }
 
@@ -125,7 +146,7 @@
       /* fixation */
       var fixation = {
           type: 'html-keyboard-response',
-          stimulus: '<div id="fixation-cross" style="position: absolute;">+</div>',
+          stimulus: '<div id="fixation-cross" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 30px;">+</div>',
           choices: jsPsych.NO_KEYS,
           trial_duration: fix_dur,
           data: { test_part: 'fixation' },
@@ -133,7 +154,14 @@
               // Reference image logic
               const refImage = new Image();
               refImage.src = "img/set_1_noise_1.png"; // Reference image for alignment
+
               refImage.onload = function () {
+                  const fixationCross = document.getElementById('fixation-cross');
+                  if (!fixationCross) {
+                      console.warn("Fixation cross not found in DOM.");
+                      return; // Exit safely if element doesn't exist
+                  }
+
                   // Calculate image dimensions and position
                   const viewportWidth = window.innerWidth;
                   const viewportHeight = window.innerHeight;
@@ -149,15 +177,14 @@
                   const embeddedCrossOffsetY = refImage.height / 2 - imgHeight / 2;
 
                   // Position the fixation cross
-                  const fixationCross = document.getElementById('fixation-cross');
-                  fixationCross.style.left = `${imgLeft + imgWidth / 2 + embeddedCrossOffsetX}px`; // Center horizontally within the image
-                  fixationCross.style.top = `${imgTop + imgHeight / 2 + embeddedCrossOffsetY}px`;  // Center vertically within the image
-                  fixationCross.style.transform = 'translate(-50%, -50%)'; // Align center point
+                  fixationCross.style.left = `${imgLeft + imgWidth / 2 + embeddedCrossOffsetX}px`;
+                  fixationCross.style.top = `${imgTop + imgHeight / 2 + embeddedCrossOffsetY}px`;
+                  fixationCross.style.transform = 'translate(-50%, -50%)';
 
                   // Adjust cross size based on image dimensions
-                  const crossRatio = 0.05; // Assume cross size is 5% of the image width
-                  const crossSize = imgWidth * crossRatio; // Calculate font size in pixels
-                  fixationCross.style.fontSize = `${crossSize}px`; // Apply font size
+                  const crossRatio = 0.05;
+                  const crossSize = imgWidth * crossRatio;
+                  fixationCross.style.fontSize = `${crossSize}px`;
               };
           }
       };
@@ -223,6 +250,9 @@
           fullscreen_mode: true
       });
 
+
+
+
       /* QUESTIONNAIRES*/
       var questionnaire_instr = {
           type: "html-keyboard-response",
@@ -247,12 +277,34 @@
       };
 
       var scale_VVIQ = [
-          "No image at all, you only “know” that you are thinking of the object",
-          "Vague and dim",
-          "Moderately clear and lively",
-          "Clear and reasonably vivid",
-          "Perfectly clear and as vivid as real seeing"
+          "(1) No image at all, you only “know” that you are thinking of the object",
+          "(2) Vague and dim",
+          "(3) Moderately clear and lively",
+          "(4) Clear and reasonably vivid",
+          "(5) Perfectly clear and as vivid as real seeing"
       ];
+
+      var vviq_1 = {
+          type: "survey-likert",
+          preamble: "think of some relative or friend whom you frequently see (but who is not with you at present) and consider carefully the picture that comes before your mind’s eye.",
+          questions: [
+              { prompt: "The exact contour of face, head, shoulders and body", labels: scale_VVIQ, required: true },
+              { prompt: "Characteristic poses of head, attitudes of body etc.", labels: scale_VVIQ, required: true },
+              { prompt: "The precise carriage, length of step etc., in walking", labels: scale_VVIQ, required: true },
+              { prompt: "The different colours worn in some familiar clothes", labels: scale_VVIQ, required: true },
+          ]
+      };
+
+      var vviq_2 = {
+          type: "survey-likert",
+          preamble: "Visualise a rising sun.  Consider carefully the picture that comes before your mind’s eye.",
+          questions: [
+              { prompt: "The sun rising above the horizon into a hazy sky", labels: scale_VVIQ, required: true },
+              { prompt: "The sky clears and surrounds the sun with blueness", labels: scale_VVIQ, required: true },
+              { prompt: "Clouds.  A storm blows up with flashes of lightning", labels: scale_VVIQ, required: true },
+              { prompt: "A rainbow appears", labels: scale_VVIQ, required: true },
+          ]
+      };
 
       var vviq_3 = {
           type: "survey-likert",
@@ -265,19 +317,27 @@
           ]
       };
 
-      timeline.push(questionnaire_instr, VVIQ_instr, vviq_3);
+      var vviq_4 = {
+          type: "survey-likert",
+          preamble: "Finally think of a country scene which involves trees, mountains and a lake.  Consider the picture that comes before your mind’s eye.",
+          questions: [
+              { prompt: "The contours of the landscape", labels: scale_VVIQ, required: true },
+              { prompt: "The colour and shape of the trees", labels: scale_VVIQ, required: true },
+              { prompt: "the colour and shape of the lake", labels: scale_VVIQ, required: true },
+              { prompt: "A strong wind blows on the trees and on the lake causing waves in the water.", labels: scale_VVIQ, required: true },
+          ]
+      };
+
+      timeline.push(questionnaire_instr, VVIQ_instr, vviq_1, vviq_2, vviq_3, vviq_4);
 
       /* TASK EXPLANATION */
       var explain_task = {
           type: "html-keyboard-response",
-          on_start: function () {
-              jsPsych.pluginAPI.preloadImages(["img/example.PNG"])
-          },
-          stimulus: "Thank you! <br> During the rest of this experiment you will be looking for <strong> objects </strong> in <strong>scenes</strong> (see below) <br>" +
-              "<strong>An object</strong> can be either a living thing or a non-living item <strong>(see</strong> <strong>left)</strong> - we will tell you which object to focus on in each scene. <br> " +
-              "<strong>A scene</strong> is the surrounding environment where the object is located <strong>(see</strong> <strong>middle)</strong>. <br>" +
-              "On every trial, your task it to decide whether the object was present in the scene or not <strong>(see</strong> <strong>right)</strong>.<br><br>" +
-              "<img src='img/example.PNG' ></img>" +
+          stimulus: "Thank you! <br> During the rest of this experiment, you will be looking for <strong> objects </strong> in <strong>scenes</strong> (see below) <br>" +
+              "<strong>An object</strong> can be either something non-living or living thing <strong>(see</strong> <strong>left)</strong> - we will tell you which object to focus on in each scene. <br> " +
+              "<strong>A scene</strong> is the surrounding environment in which the object is located <strong>(see</strong> <strong>middle)</strong>. <br>" +
+              "On every trial, your task is to decide whether the object was present in the scene or not <strong>(see</strong> <strong>right)</strong>.<br><br>" +
+              "<img src='img/example.png' ></img>" +
               "<br><br> Press [space] to continue ",
           choices: ['space']
       }; /*  width=600 */
@@ -287,33 +347,50 @@
 
       var practice_instruction = {
           type: "html-keyboard-response",
-          on_start: function () {
-              // Dynamically select the example image based on the chosen set
-              var exampleImage = "img/sets_example.png";
-              jsPsych.pluginAPI.preloadImages([exampleImage]);
-          },
           stimulus: function () {
-              return "We will first start with a few practice trials <br>" +
-                  "Each time, <strong>one</strong> of four object will gradually appear in a noisy environment <br>" +
-                  "See the examples for the objects below:<br><br>" +
-                  "<img src='img/sets_example.png' style='max-width: 60vw; max-height: 60vh; display: block; margin: auto;'> <br>" +
-                  "Afterwards, if you saw an object press [" + responses[0] + "] <br> " +
-                  "If you did not see an object press [" + responses[1] + "] <br>" +
-                  "Please use your left hand to make your response (you will need your right hand later) <br>" +
-                  "Always keep your eyes fixated on the cross in the middle. <br>" +
-                  "<br> Press [space] to start the practice trials";
+              return `
+            We will first start with a few practice trials <br>
+            Each time, <strong>one</strong> of four objects will gradually appear in a scene. <br>
+            See the examples for the objects below, please take a moment to study these objects:<br><br>
+            <img src='img/sets_example.png' style='max-width: 60vw; max-height: 60vh; display: block; margin: auto;'> <br>
+            Afterwards, if you saw an object press [${responses[0]}] <br>
+            If you did not see an object press [${responses[1]}] <br>
+            Please use your left hand to make your response (you will need your right hand later) <br>
+            Always keep your eyes fixated on the cross in the middle. <br><br>
+            <span id="wait-msg"><strong>Please wait...</strong></span>
+        `;
           },
-          choices: ['space']
+          choices: jsPsych.NO_KEYS, // Disable any keys before the space key prompt
+          on_load: function () {
+              // Wait for 5 seconds
+              setTimeout(() => {
+                  // Change the text to prompt for space key
+                  const waitMsg = document.getElementById('wait-msg');
+                  waitMsg.innerHTML = "Press [space] to start the practice trials.";
+
+                  // Enable the space key response after 5 seconds
+                  jsPsych.pluginAPI.getKeyboardResponse({
+                      callback_function: function (info) {
+                          jsPsych.finishTrial({
+                              rt: info.rt,
+                              key_press: info.key
+                          });
+                      },
+                      valid_responses: [' '], // Space key
+                      rt_method: 'performance',
+                      persist: false,
+                      allow_held_key: false
+                  });
+              }, 5000); // Wait 5 seconds before asking for space key
+          }
       };
+
       timeline.push(practice_instruction);
 
       var show_dynamic_stimulus = {
           type: 'animation',
           stimuli: jsPsych.timelineVariable('stimulus'),
           choices: jsPsych.NO_KEYS,
-          on_start: function () {
-              jsPsych.pluginAPI.preloadImages(jsPsych.timelineVariable('stimulus', true))
-          },
           frame_isi: 0,
           frame_time: Math.round(stim_dur / num_steps),
           on_load: function () {
@@ -428,99 +505,17 @@
       };
       timeline.push(detection_practice_loop_node); 
    
-      /* PRACTICE IMAGERY */
-      var instr_imagery = {
-          type: "html-keyboard-response",
-          stimulus: "Another part of the experiment is that we will sometimes ask you <br> " +
-              "to also imagine an object while you are looking at the noisy environment. <br> " +
-              "You will always be asked to imagine the same object for a few trials in a row. <br>" +
-              "Again, always keep your eyes fixated on the cross in the middle. <br>" +
-              "We will now practice this. <br>" +
-              "<br> Press [space] to continue",
-          choices: ['space']
-      }
-      timeline.push(instr_imagery);
-
-      window.order_ima = jsPsych.randomization.repeat([0, 1, 2, 3], num_ima_reps);
-      window.ima_block = 0;
-
-      for (var block = 0; block < (num_ima_reps * 4); block++) {
-
-          var start_ima_block = {
-              type: "html-keyboard-response",
-              stimulus: function () {
-
-                  if (window.order_ima[window.ima_block] == 0) {
-                      window.set_num = 1;
-                      var stim_pic = "img/set_1_obj_1_example_ima.png";
-                  } else if (window.order_ima[window.ima_block] == 1) {
-                      window.set_num = 1;
-                      var stim_pic = "img/set_1_obj_2_example_ima.png";
-                  } else if (window.order_ima[window.ima_block] == 2) {
-                      window.set_num = 2;
-                      var stim_pic = "img/set_2_obj_1_example_ima.png";
-                  } else if (window.order_ima[window.ima_block] == 3) {
-                      window.set_num = 2;
-                      var stim_pic = "img/set_2_obj_2_example_ima.png";
-                  };
-
-                  jsPsych.pluginAPI.preloadImages([stim_pic])
-
-                  window.ima_block++
-
-                  return "For the next few trials, please imagine the object below: <br> " +
-                      "<img src=" + stim_pic + " style='max-width: 60vw; max-height: 60vh; display: block; margin: auto;'> <br>" +
-                      "Imagine the object as vividly as possible, as if it was actually presented on the screen. <br> " +
-                      "Please keep your eyes open and look at the noisy environment while imagining. <br>" +
-                      "After each trial, you will be asked to rate the vividness of your imagery <br> " +
-                      "on a scale from 1 (not vivid at all) to 5 (perfectly clear and as vivid as real seeing). <br><br>" +
-                      "<br> <br> Press [space] to continue "
-              },
-              choices: ['space']
-          };
-
-          var show_dynamic_noise = {
-              type: 'animation',
-              stimuli: function () {
-                  arr = makeStimSequence(1, window.vis_level, num_steps, 0, -1, -1, window.set_num, 0);
-                  jsPsych.pluginAPI.preloadImages(arr)
-                  return arr
-              },
-              choices: jsPsych.NO_KEYS,
-              frame_isi: 0,
-              frame_time: Math.round(stim_dur / num_steps)
-          };
-
-
-          var ima_response = {
-              type: "html-slider-response",
-              labels: ['Not vivid at all', 'Very vivid'],
-              stimulus: 'How vividly did you imagine the object?',
-              require_movement: true,
-              data: { test_part: 'ima_practice' }
-          };
-
-          var ima_procedure = {
-              timeline: [fixation, show_dynamic_noise, ima_response],
-              repetitions: num_ima_trials
-          };
-
-          timeline.push(start_ima_block, ima_procedure);
-      };
-
       
-
       /* STAIRCASE DETECTION */
 
       var stair_instruction = {
           type: "html-keyboard-response",
           stimulus: "We will now do a calibration block. <br>" +
               "During this part, you again have to indicate whether you saw an object. <br>" +
-              "You do not have to imagine the object for this part. <br>" +
               "Over time, it will become harder and harder to see the object. <br>" +
               "Do not worry if you become unsure about whether you saw something or not, that is supposed to happen. <br> " +
               "Just give your best guess on each trial. <br>" +
-              "The calibration will take about 5 minutes per object (4 overall) <br>" +
+              "The calibration will take about 5 minutes per object, and there will be 4 overall. <br>" +
               "<br> Press [space] to continue ",
           choices: ['space']
       };
@@ -593,7 +588,7 @@
           stimuli: function () {
               window.stim_id = window.trial_order[window.trl_num];
               arr = makeStimSequence(1, window.vis_level, num_steps, window.stim_id, -1, -1, window.set_num, 0);
-              jsPsych.pluginAPI.preloadImages(arr)
+              //jsPsych.pluginAPI.preloadImages(arr)
               return arr
           },
           choices: jsPsych.NO_KEYS,
@@ -807,13 +802,97 @@
 
       timeline.push(between_objects_loop);
 
+      /* PRACTICE IMAGERY */
+      var instr_imagery = {
+          type: "html-keyboard-response",
+          stimulus: "During the experiment, we will sometimes ask you <br> " +
+              "to also imagine an object while you are looking at the scene. <br> " +
+              "You will always be asked to imagine the same object for a few trials in a row. <br>" +
+              "Again, always keep your eyes open and fixated on the cross in the middle. <br>" +
+              "You will indicate your experience by dragging a slider with your mouse. <br>" + 
+              "We will now practice this. <br>" +
+              "<br> Press [space] to continue",
+          choices: ['space']
+      }
+      timeline.push(instr_imagery);
+
+      window.order_ima = jsPsych.randomization.repeat([0, 1, 2, 3], num_ima_reps);
+      window.ima_block = 0;
+
+      for (var block = 0; block < (num_ima_reps * 4); block++) {
+
+          var start_ima_block = {
+              type: "html-keyboard-response",
+              stimulus: function () {
+
+                  if (window.order_ima[window.ima_block] == 0) {
+                      window.set_num = 1;
+                      var stim_pic = "img/set_1_obj_1_example_ima.png";
+                  } else if (window.order_ima[window.ima_block] == 1) {
+                      window.set_num = 1;
+                      var stim_pic = "img/set_1_obj_2_example_ima.png";
+                  } else if (window.order_ima[window.ima_block] == 2) {
+                      window.set_num = 2;
+                      var stim_pic = "img/set_2_obj_1_example_ima.png";
+                  } else if (window.order_ima[window.ima_block] == 3) {
+                      window.set_num = 2;
+                      var stim_pic = "img/set_2_obj_2_example_ima.png";
+                  };
+
+                  //jsPsych.pluginAPI.preloadImages([stim_pic])
+
+                  window.ima_block++
+
+                  return "For the next few trials, please imagine the object below: <br> " +
+                      "<img src=" + stim_pic + " style='max-width: 60vw; max-height: 60vh; display: block; margin: auto;'> <br>" +
+                      "Imagine the object as vividly as possible, as if it was actually presented on the screen. <br> " +
+                      "Please keep your eyes open and look at the scene while imagining. <br>" +
+                      "After each trial, you will be asked to rate the vividness of your imagery <br> " +
+                      "on a scale from not vivid at all to perfectly clear and as vivid as real seeing. <br><br>" +
+                      "<br> <br> Press [space] to continue "
+              },
+              choices: ['space']
+          };
+
+          var show_dynamic_noise = {
+              type: 'animation',
+              stimuli: function () {
+                  arr = makeStimSequence(1, window.vis_level, num_steps, 0, -1, -1, window.set_num, 0);
+                  //jsPsych.pluginAPI.preloadImages(arr)
+                  return arr
+              },
+              choices: jsPsych.NO_KEYS,
+              frame_isi: 0,
+              frame_time: Math.round(stim_dur / num_steps)
+          };
+
+
+
+          var ima_response = {
+              type: "html-slider-response",
+              labels: ['Not vivid at all', '|', '|', '|', 'Very vivid'],
+              stimulus: 'How vividly did you imagine the object?',
+              require_movement: true,
+              data: { test_part: 'ima_practice' }
+          };
+
+          var ima_procedure = {
+              timeline: [fixation, show_dynamic_noise, ima_response],
+              repetitions: num_ima_trials
+          };
+
+          timeline.push(start_ima_block, ima_procedure);
+      };
+
+
+
 
       /* VISIBILITY PRACTICE */
       var confidence_instruction1 = {
           type: "html-keyboard-response",
-          stimulus: "Well done! <br><br> The final part of the experiment is that during those trials <br>" +
-              "in which you don't have to imagine, immediately after you indicated that you did or did not  <br>" +
-              "see a stimulus, you will be asked how vivid did you see the object. <br> <br>" +
+          stimulus: "Well done! <br><br> The final part is that during the main task, <br>" +
+              "in trials in which you don't have to imagine, immediately after you indicated that you did or did not  <br>" +
+              "see a stimulus, you will also be asked how vividly did you see the object. <br> <br>" +
               "<br> Press [space] to continue",
           choices: ['space']
       };
@@ -821,8 +900,8 @@
 
       var confidence_instruction2 = {
           type: "html-keyboard-response",
-          stimulus: "The lowest end of the scale reflects that the stimulus was not vivid at all. <br>" +
-              "The highest end of the scale reflects that the stimulus was very vivid. <br><br>" +
+          stimulus: "The lowest end of the scale reflects that the stimulus was not vivid at all, you barely saw anything. <br>" +
+              "The highest end of the scale reflects that the stimulus was very vivid and clearly visible. <br><br>" +
               "You will indicate your experience by dragging a slider with your mouse. <br>" +
               "<br> Press [space] to do a few practice trials",
           choices: ['space']
@@ -831,7 +910,7 @@
 
       var visibility_response = {
           type: 'html-slider-response',
-          labels: ['Not vivid at all', 'Very vivid'],
+          labels: ['Not vivid at all', '|', '|', '|', 'Very vivid'],
           stimulus: 'How vividly did you see the object?',
           require_movement: true, // to make sure the participant responds
       };
@@ -884,7 +963,7 @@
 
                   let arr = makeStimSequence(1, window.visibility_levels[index][j], num_steps, window.obj, -1, -1, window.set_num, 0);
 
-                  jsPsych.pluginAPI.preloadImages(arr)
+                  //jsPsych.pluginAPI.preloadImages(arr)
                   return arr;
               },
               choices: jsPsych.NO_KEYS,
@@ -933,19 +1012,31 @@
 
 
       /* MAIN EXPERIMENT */
-      var main_start = {
+      var main_start1 = {
           type: "html-keyboard-response",
-          stimulus: "We will now continue to the main part of the experiment. <br>" +
+          stimulus: "We will now continue to the main part of the experiment. <br>" + 
+              "During this part, in each trial, one of the object will appear in one of these scenes below:<br><br>" +
+              "<img src='img/sets_scenes_example.png' style='max-width: 60vw; max-height: 60vh; display: block; margin: auto;'  ></img> <br>" +
+              "Please take a moment to study these scenes.<br><br>" +
+              "Press [space] to continue ",
+          choices: ['space']
+      };
+
+      var main_start2 = {
+          type: "html-keyboard-response",
+          stimulus: 
               "There will be " + num_blocks + " blocks in total. <br> " +
-              "During each block an object will be presented on 50% of the trials. <br> " +
+              "During each block, an object will be presented on 50% of the trials. <br> " +
               "Additionally, during each block you will be asked to either imagine the object or not. <br>" +
-              "Please imagine the object as vividly as possible, as if it was actually presented on the screen. <br>" +
-              "Your task is again to indicate whether an object was presented or not and how vividly did you imagine or see the object. <br>" +
-              "Feel free to take a short break at the start of a new block whenever you want to. <br> " +
+              "When instructed to do so, please imagine the object as vividly as possible, as if it was actually presented on the screen. <br>" +
+              "Your task is again to indicate whether an object was presented or not and how vividly you imagined or saw the object. <br>" +
+              "Do not worry if you become unsure about whether you saw something or not, that is supposed to happen. <br> " +
+              "Just give your best guess on each trial. <br>" +
+              "Feel free to take a short break (not more than 10 minutes) at the start of a new block whenever you want to. <br> " +
               "<br> Press [space] to continue ",
           choices: ['space']
       };
-      timeline.push(main_start);
+      timeline.push(main_start1, main_start2);
 
       /* create randomization */
       condition_order = jsPsych.randomization.repeat([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], num_blocks / 16);
@@ -1091,7 +1182,7 @@
 
 
 
-                  jsPsych.pluginAPI.preloadImages([stim_pic])
+                  //jsPsych.pluginAPI.preloadImages([stim_pic])
 
                   return "<br> This is block " + (window.block_num + 1) + " out of " + num_blocks +
                       "<br> During this block you will see the object below: " +
@@ -1112,7 +1203,7 @@
 
                       window.stim_id = window.trial_order[window.trl_num];
                       arr = makeStimSequence(1, window.object_vis_level, num_steps, window.stim_id, window.scene, window.congruency, window.set_num, 1);
-                      jsPsych.pluginAPI.preloadImages(arr)
+                      //jsPsych.pluginAPI.preloadImages(arr)
                       return arr
                   },
                   choices: jsPsych.NO_KEYS,
@@ -1140,7 +1231,8 @@
 
               var vividnessvisibility_screen = {
                   type: 'html-slider-response',
-                  labels: ['Not vivid at all', 'Very vivid'],
+                  labels: ['Not vivid at all', '|', '|', '|', 'Very vivid'],
+                  data: { test_part: 'vividness_q'},
                   stimulus: function () {
                       if (condition_order[window.block_num] == 0 || condition_order[window.block_num] == 2 || condition_order[window.block_num] == 4 || condition_order[window.block_num] == 6 || condition_order[window.block_num] == 8 || condition_order[window.block_num] == 10 || condition_order[window.block_num] == 12 || condition_order[window.block_num] == 14) {
                           return 'How vividly did you see the object?';
@@ -1203,7 +1295,7 @@
       var cong_check_start = {
           type: "html-keyboard-response",
           stimulus: "Thank you!. <br>" +
-              "In this final section, you will be asked about the scenes and objects you have experienced during the experiment. <br> " +
+              "In this final section, you will be asked about the scenes and objects that you have experienced during the experiment. <br> " +
               "<br> Press [space] to continue ",
           choices: ['space'],
           on_finish: function () {
@@ -1224,11 +1316,6 @@
           "img/set_2_inanimate.png"
       ];
 
-      jsPsych.pluginAPI.preloadImages(all_images, function () {
-          console.log("All images preloaded successfully!");
-      }, function (images_left) {
-          console.log("Images left to load:", images_left);
-      });
 
       /* run over the objects */
       for (var pair = 0; pair < num_of_pairs; pair++) {
@@ -1253,7 +1340,7 @@
 
                   console.log("Loading image:", stim_pic); // Debugging log
 
-                  return 'How likely is it to find this object in this scene? <br>' +
+                  return 'How likely is it to find this object in this scene in the real world? <br>' +
                       "<img src='" + stim_pic + "' style='max-width: 60vw; max-height: 60vh; display: block; margin: auto;'> <br>";
               },
               require_movement: true, // to make sure the participant responds 
@@ -1267,6 +1354,7 @@
       var debrief_questions = {
           type: 'survey-text',
           questions: [
+              { prompt: "Which of the objects was the easiest and hardest to imagine?", rows: 2, columns: 40 },
               { prompt: "What is your age?", rows: 2, columns: 40 },
               {
                   prompt: "The answer to this question will not affect your payment. " +
