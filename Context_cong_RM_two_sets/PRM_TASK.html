@@ -38,13 +38,25 @@
 
       ////TRY TO PRELOAD IMG BEFOREHAND //
 
-      fetch("image_list.json")
-          .then(response => response.json())
-          .then(images => {
-              jsPsych.pluginAPI.preloadImages(images, function () {
-                  console.log("All images preloaded.");
-              });
-          });
+fetch("image_list.json")
+    .then(response => response.json())
+    .then(images => {
+        // First preload using jsPsych's API
+        jsPsych.pluginAPI.preloadImages(images, function () {
+            console.log("All images preloaded.");
+
+            // Then manually create and cache all image objects
+            images.forEach(src => {
+                const img = new Image();
+                img.src = src;
+                imageCache.push(img);  // Prevents garbage collection
+            });
+
+            // Now safe to start experiment
+            jsPsych.run(timeline);
+        });
+    });
+      
 
 
       /* INITIALIZE SOME VARIABLES */
@@ -63,7 +75,7 @@
       const lower_bound = 60; /* lower than this - increase isibility */
       const upper_bound = 80; /* higher than this - decrease visibility */
       const num_trials_stair_block = 10; /* 10 evaluate acc after this many trials */
-      const num_stair_reps = 1; /* 12 number of staircase reps - two blocks - one per tilt */
+      const num_stair_reps = 12; /* 12 number of staircase reps - two blocks - one per tilt */
       const num_objects = 2 /* 2 - inanimated and animated objects within a set */
       const num_ignore_staircases = 11 /* 3 number of staircases that will not be included in the 70% stopping rule */
       const num_consecutive_stairs = 2 /* 2 number of staircases that obtiaobtained ned 70% acc */
